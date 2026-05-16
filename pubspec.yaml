@@ -16,8 +16,8 @@ dependencies:
   # Processamento de imagem (filtros, ajustes)
   image: ^4.1.7
 
-  # Salvar na galeria do Android
-  gallery_saver: ^2.3.2
+  # Salvar na galeria do Android (Substituto moderno do gallery_saver)
+  gal: ^2.3.0
 
   # Permissões (câmera, armazenamento)
   permission_handler: ^11.3.1
@@ -35,4 +35,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
