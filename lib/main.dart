@@ -7,6 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:gallery_saver/gallery_saver.dart';
+import 'screens/high_res_capture_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,7 @@ class MotoProCamApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
       ),
-      home: CameraScreen(cameras: cameras),
+      home: HighResCaptureScreen(cameras: cameras),
     );
   }
 }
@@ -526,4 +527,3 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 }
-
