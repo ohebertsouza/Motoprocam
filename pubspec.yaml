@@ -29,7 +29,7 @@ dependencies:
   flutter_native_splash: ^2.3.0
 
   # Face detection (portrait mode enhancements)
-  google_ml_kit: ^0.17.0
+  google_mlkit_face_detection: ^0.13.0
 
   # Ícones extras
   cupertino_icons: ^1.0.8

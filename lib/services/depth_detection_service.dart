@@ -2,13 +2,13 @@ import 'dart:typed_data';
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../models/portrait_settings.dart';
 
 class DepthDetectionService {
   DepthDetectionService()
-      : _faceDetector = GoogleMlKit.vision.faceDetector(
-          FaceDetectorOptions(
+      : _faceDetector = FaceDetector(
+          options: FaceDetectorOptions(
             enableContours: false,
             enableClassification: false,
             performanceMode: FaceDetectorMode.fast,

@@ -106,15 +106,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         await controller.setFocusPoint(faceCenter);
       }
 
-      final Float32List? depthMap = _selectedMode == 'Portrait'
-          ? _depthDetectionService.buildEstimatedDepthMap(
-              width: previewWidth.toInt(),
-              height: previewHeight.toInt(),
-              portraitSettings: _portraitSettings,
-              faceCenter: faceCenter,
-            )
-          : null;
-      final portraitEnabled = _selectedMode == 'Portrait' && depthMap != null;
+      final portraitEnabled = _selectedMode == 'Portrait';
+      if (portraitEnabled) {
+        _depthDetectionService.buildEstimatedDepthMap(
+          width: previewWidth.toInt(),
+          height: previewHeight.toInt(),
+          portraitSettings: _portraitSettings,
+          faceCenter: faceCenter,
+        );
+      }
 
       final processed = await _imageProcessingService.processPhoto(
         bytes,

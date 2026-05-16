@@ -98,7 +98,7 @@ class IphoneProcessorV2 {
 
   static img.Image _applyPortraitBlur(img.Image source, PortraitSettings settings) {
     final blurRadius = (settings.blurAmount * 12).round().clamp(1, 12).toInt();
-    final blurred = img.gaussianBlur(img.copyResize(source, width: source.width, height: source.height), radius: blurRadius);
+    final blurred = img.gaussianBlur(img.Image.from(source), radius: blurRadius);
 
     final centerX = source.width / 2;
     final centerY = source.height * 0.42;
@@ -108,7 +108,7 @@ class IphoneProcessorV2 {
       for (var x = 0; x < source.width; x++) {
         final distance = math.sqrt(math.pow(x - centerX, 2) + math.pow(y - centerY, 2));
         final depthWeight = (distance / maxDistance).clamp(0.0, 1.0).toDouble();
-        final alpha = depthWeight * settings.blurAmount;
+        final alpha = depthWeight * settings.blurAmount * settings.depthStrength;
 
         final original = source.getPixel(x, y);
         final back = blurred.getPixel(x, y);

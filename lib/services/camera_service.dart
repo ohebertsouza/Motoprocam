@@ -18,8 +18,8 @@ class CameraService {
   Future<void> initialize({String? modelName}) async {
     if (cameras.isEmpty) return;
     _lensProfiles = DeviceCameraInfo.buildLensProfiles(cameras);
-    final mainLens = _lensProfiles.where((lens) => lens.name == 'Main').firstOrNull;
-    _selectedCameraIndex = mainLens?.cameraIndex ?? 0;
+    final mainLens = _lensProfiles.where((lens) => lens.name == 'Main');
+    _selectedCameraIndex = mainLens.isNotEmpty ? mainLens.first.cameraIndex : 0;
     await _initializeController(modelName: modelName);
   }
 
@@ -76,8 +76,4 @@ class CameraService {
     await _controller?.dispose();
     _controller = null;
   }
-}
-
-extension<E> on Iterable<E> {
-  E? get firstOrNull => isEmpty ? null : first;
 }
