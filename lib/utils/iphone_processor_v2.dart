@@ -6,6 +6,10 @@ import 'package:image/image.dart' as img;
 import '../models/image_processor_settings.dart';
 import '../models/portrait_settings.dart';
 
+const double _defaultPortraitCenterY = 0.42;
+const int _portraitBlurRadiusScale = 12;
+const int _portraitMaxBlurRadius = 12;
+
 class IphoneProcessorV2 {
   static Future<Uint8List> process(
     Uint8List inputBytes, {
@@ -97,11 +101,12 @@ class IphoneProcessorV2 {
   }
 
   static img.Image _applyPortraitBlur(img.Image source, PortraitSettings settings) {
-    final blurRadius = (settings.blurAmount * 12).round().clamp(1, 12).toInt();
+    final blurRadius =
+        (settings.blurAmount * _portraitBlurRadiusScale).round().clamp(1, _portraitMaxBlurRadius).toInt();
     final blurred = img.gaussianBlur(img.Image.from(source), radius: blurRadius);
 
     final centerX = source.width / 2;
-    final centerY = source.height * 0.42;
+    final centerY = source.height * _defaultPortraitCenterY;
     final maxDistance = math.sqrt(source.width * source.width + source.height * source.height) / 2;
 
     for (var y = 0; y < source.height; y++) {

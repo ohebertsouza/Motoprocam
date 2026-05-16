@@ -5,6 +5,8 @@ import 'dart:ui';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../models/portrait_settings.dart';
 
+const double defaultFaceCenterY = 0.42;
+
 class DepthDetectionService {
   DepthDetectionService()
       : _faceDetector = FaceDetector(
@@ -46,7 +48,7 @@ class DepthDetectionService {
   }) {
     final data = Float32List(width * height);
     final centerX = (faceCenter?.dx ?? 0.5) * width;
-    final centerY = (faceCenter?.dy ?? 0.42) * height;
+    final centerY = (faceCenter?.dy ?? defaultFaceCenterY) * height;
     final maxDistance = math.sqrt(width * width + height * height) / 2;
 
     for (var y = 0; y < height; y++) {

@@ -40,6 +40,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   bool _isCapturing = false;
   double _zoomPercent = 0.0;
   String _selectedMode = 'Auto';
+  String? _deviceModel;
+  Float32List? _lastDepthMap;
 
   static const List<String> _modes = <String>['Night', 'Auto', 'Portrait', 'Pro'];
 
@@ -55,11 +57,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     await Permission.camera.request();
     await Permission.storage.request();
     final capabilities = await DeviceCameraInfo.getNativeCapabilities();
-    final modelName = capabilities['deviceModel'] as String?;
+    _deviceModel = capabilities['deviceModel'] as String?;
 
     if (widget.cameras.isEmpty) return;
 
-    await _cameraService.initialize(modelName: modelName);
+    await _cameraService.initialize(modelName: _deviceModel);
     if (mounted) setState(() {});
   }
 
@@ -108,12 +110,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
       final portraitEnabled = _selectedMode == 'Portrait';
       if (portraitEnabled) {
-        _depthDetectionService.buildEstimatedDepthMap(
+        _lastDepthMap = _depthDetectionService.buildEstimatedDepthMap(
           width: previewWidth.toInt(),
           height: previewHeight.toInt(),
           portraitSettings: _portraitSettings,
           faceCenter: faceCenter,
         );
+      } else {
+        _lastDepthMap = null;
       }
 
       final processed = await _imageProcessingService.processPhoto(
@@ -153,7 +157,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   Future<void> _selectLens(int cameraIndex) async {
-    await _cameraService.selectLens(cameraIndex);
+    await _cameraService.selectLens(cameraIndex, modelName: _deviceModel);
     if (mounted) setState(() {});
   }
 
@@ -245,6 +249,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               right: 12,
               bottom: 160,
               child: _buildModePanel(),
+            ),
+          if (_selectedMode == 'Portrait' && _lastDepthMap != null)
+            Positioned(
+              bottom: 146,
+              left: 18,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Text('Depth map active', style: TextStyle(color: Colors.white70, fontSize: 11)),
+              ),
             ),
           Positioned(
             left: 20,
