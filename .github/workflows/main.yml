@@ -21,6 +21,11 @@ jobs:
         with:
           flutter-version: 'any' 
 
+      - name: Corrigir projeto Gradle antigo (Recriar pasta Android)
+        run: |
+          rm -rf android
+          flutter create --platforms android .
+
       - name: Instalar dependências do projeto
         run: flutter pub get
 
