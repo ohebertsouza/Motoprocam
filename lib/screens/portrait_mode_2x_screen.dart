@@ -159,7 +159,7 @@ class _PortraitMode2xScreenState extends State<PortraitMode2xScreen> {
                 setState(() {
                   _settings = _settings.copyWith(lensMode: mode);
                   _recommendation = mode == PortraitLensMode.x2
-                      ? '2x recomendado para subject único e fundo comprimido.'
+                      ? '2x recomendado para sujeito único e fundo comprimido.'
                       : '1x recomendado para grupos e ambientes amplos.';
                 });
               },
