@@ -25,6 +25,10 @@ dependencies:
   # Diretórios temporários
   path_provider: ^2.1.3
 
+  # ML para retrato (segmentação/face priority)
+  google_ml_kit: ^0.17.0
+  tflite_flutter: ^0.10.0
+
   # Ícones extras
   cupertino_icons: ^1.0.8
 
@@ -35,4 +39,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
