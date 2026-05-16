@@ -1,0 +1,34 @@
+name: Build Motoprocam APK
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar o Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Configurar o Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'any' 
+
+      - name: Instalar dependências do projeto
+        run: flutter pub get
+
+      - name: Gerar o APK
+        run: flutter build apk --release
+
+      - name: Disponibilizar o APK para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: motoprocam-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
