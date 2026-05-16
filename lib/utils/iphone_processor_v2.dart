@@ -9,6 +9,8 @@ import '../models/portrait_settings.dart';
 const double _defaultPortraitCenterY = 0.42;
 const int _portraitBlurRadiusScale = 12;
 const int _portraitMaxBlurRadius = 12;
+const double _shadowBoostFactor = 0.45;
+const double _highlightCompressionFactor = 0.35;
 
 class IphoneProcessorV2 {
   static Future<Uint8List> process(
@@ -56,8 +58,8 @@ class IphoneProcessorV2 {
   }
 
   static img.Image _applyCurves(img.Image source, double shadows, double highlights) {
-    final shadowBoost = 1.0 + (shadows * 0.45);
-    final highlightCompression = 1.0 - (highlights * 0.35);
+    final shadowBoost = 1.0 + (shadows * _shadowBoostFactor);
+    final highlightCompression = 1.0 - (highlights * _highlightCompressionFactor);
 
     for (var y = 0; y < source.height; y++) {
       for (var x = 0; x < source.width; x++) {

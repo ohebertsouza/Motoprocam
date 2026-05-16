@@ -28,11 +28,7 @@ class DepthDetectionService {
     final faces = await _faceDetector.processImage(inputImage);
     if (faces.isEmpty) return null;
 
-    faces.sort(
-      (a, b) => (b.boundingBox.width * b.boundingBox.height).compareTo(
-        a.boundingBox.width * a.boundingBox.height,
-      ),
-    );
+    faces.sort((a, b) => _rectArea(b.boundingBox).compareTo(_rectArea(a.boundingBox)));
     final largest = faces.first;
     final center = largest.boundingBox.center;
     final normalizedX = (center.dx / imageWidth).clamp(0.0, 1.0).toDouble();
@@ -64,4 +60,6 @@ class DepthDetectionService {
   Future<void> dispose() async {
     await _faceDetector.close();
   }
+
+  double _rectArea(Rect rect) => rect.width * rect.height;
 }

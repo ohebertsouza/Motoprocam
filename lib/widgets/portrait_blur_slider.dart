@@ -15,7 +15,7 @@ class PortraitBlurSlider extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Bokeh ${value.toString()}%', style: const TextStyle(color: Colors.white)),
+        Text('Bokeh $value%', style: const TextStyle(color: Colors.white)),
         Slider(
           value: value.toDouble(),
           min: 0,

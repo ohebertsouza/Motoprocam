@@ -44,6 +44,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Float32List? _lastDepthMap;
 
   static const List<String> _modes = <String>['Night', 'Auto', 'Portrait', 'Pro'];
+  static const double _nightModeExposure = 0.25;
+  static const double _nightModeNoiseReduction = 0.35;
+  static const double _nightModeHighlights = 0.3;
+  static const double _autoModeExposure = 0.0;
+  static const double _autoModeNoiseReduction = 0.2;
+  static const double _autoModeHighlights = 0.2;
 
   @override
   void initState() {
@@ -75,15 +81,50 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
     try {
       await _cameraService.applyManualSettings(_cameraSettings);
-      final shot = await _cameraService.capturePhoto();
-      final bytes = await shot.readAsBytes();
+      final previewWidth = controller.value.previewSize?.width ?? 1080;
+      final previewHeight = controller.value.previewSize?.height ?? 1920;
+      XFile shot;
+      Uint8List bytes;
+      Offset? faceCenter;
+
+      if (_selectedMode == 'Portrait' && _portraitSettings.enableFacePriority) {
+        final probeShot = await _cameraService.capturePhoto();
+        faceCenter = await _depthDetectionService.detectPrimaryFaceCenter(
+          imagePath: probeShot.path,
+          imageWidth: previewWidth,
+          imageHeight: previewHeight,
+        );
+        if (faceCenter != null) {
+          await controller.setFocusPoint(faceCenter);
+          await Future<void>.delayed(const Duration(milliseconds: 120));
+        }
+      }
+
+      shot = await _cameraService.capturePhoto();
+      bytes = await shot.readAsBytes();
+
+      if (faceCenter == null && _selectedMode == 'Portrait' && _portraitSettings.enableFacePriority) {
+        faceCenter = await _depthDetectionService.detectPrimaryFaceCenter(
+          imagePath: shot.path,
+          imageWidth: previewWidth,
+          imageHeight: previewHeight,
+        );
+      }
 
       if (_selectedMode == 'Night') {
-        _processorSettings = _processorSettings.copyWith(exposure: 0.25, noiseReduction: 0.35, highlights: 0.3);
+        _processorSettings = _processorSettings.copyWith(
+          exposure: _nightModeExposure,
+          noiseReduction: _nightModeNoiseReduction,
+          highlights: _nightModeHighlights,
+        );
       }
 
       if (_selectedMode == 'Auto') {
-        _processorSettings = _processorSettings.copyWith(exposure: 0.0, noiseReduction: 0.2, highlights: 0.2);
+        _processorSettings = _processorSettings.copyWith(
+          exposure: _autoModeExposure,
+          noiseReduction: _autoModeNoiseReduction,
+          highlights: _autoModeHighlights,
+        );
       }
 
       if (_selectedMode == 'Pro') {
@@ -92,20 +133,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           whiteBalanceKelvin: _cameraSettings.whiteBalanceKelvin,
           enableLut: true,
         );
-      }
-
-      final previewWidth = controller.value.previewSize?.width ?? 1080;
-      final previewHeight = controller.value.previewSize?.height ?? 1920;
-      final Offset? faceCenter = _selectedMode == 'Portrait' && _portraitSettings.enableFacePriority
-          ? await _depthDetectionService.detectPrimaryFaceCenter(
-              imagePath: shot.path,
-              imageWidth: previewWidth,
-              imageHeight: previewHeight,
-            )
-          : null;
-
-      if (faceCenter != null) {
-        await controller.setFocusPoint(faceCenter);
       }
 
       final portraitEnabled = _selectedMode == 'Portrait';
