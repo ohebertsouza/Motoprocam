@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 
+import 'screens/portrait_mode_2x_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final cameras = await availableCameras();
@@ -291,7 +293,18 @@ class _CameraScreenState extends State<CameraScreen>
     await _initCamera();
   }
 
-  void _aplicarModo(String modo) {
+  Future<void> _aplicarModo(String modo) async {
+    if (modo == 'Retrato') {
+      final camera = widget.cameras[_cameraIndex];
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PortraitMode2xScreen(camera: camera),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+
     setState(() {
       _modoSelecionado = modo;
       switch (modo) {
@@ -526,4 +539,3 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 }
-
