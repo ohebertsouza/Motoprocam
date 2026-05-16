@@ -25,6 +25,12 @@ dependencies:
   # Diretórios temporários
   path_provider: ^2.1.3
 
+  # Splash screen polish
+  flutter_native_splash: ^2.3.0
+
+  # Face detection (portrait mode enhancements)
+  google_ml_kit: ^0.17.0
+
   # Ícones extras
   cupertino_icons: ^1.0.8
 
@@ -35,4 +41,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
