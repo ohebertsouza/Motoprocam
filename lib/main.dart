@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate'; // Necessário para o Isolate.run
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -6,7 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:gallery_saver/gallery_saver.dart';
+import 'package:gal/gal.dart'; // Importação do Gal no lugar do gallery_saver
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,68 +35,44 @@ class MotoProCamApp extends StatelessWidget {
 // ─── Processamento de Imagem Estilo iPhone ────────────────────────────────────
 
 class IPhoneProcessor {
-  /// Aplica todos os ajustes na imagem
   static Future<Uint8List> process(
     Uint8List inputBytes, {
-    double exposicao = 0.0,       // -1.0 a +1.0
-    double brilho = 0.0,          // -1.0 a +1.0
-    double contraste = 0.0,       // -1.0 a +1.0
-    double saturacao = 0.0,       // -1.0 a +1.0
-    double nitidez = 0.5,         // 0.0 a 1.0
-    double tonQuente = 0.3,       // 0.0 a 1.0 (warmth estilo iPhone)
-    double vibrancia = 0.3,       // 0.0 a 1.0
+    double exposicao = 0.0,
+    double brilho = 0.0,
+    double contraste = 0.0,
+    double saturacao = 0.0,
+    double nitidez = 0.5,
+    double tonQuente = 0.3,
+    double vibrancia = 0.3,
     bool hdr = true,
   }) async {
     img.Image? image = img.decodeImage(inputBytes);
     if (image == null) return inputBytes;
 
-    // 1. Exposição
     if (exposicao != 0.0) {
       double fator = math.pow(2.0, exposicao).toDouble();
       image = img.adjustColor(image, saturation: 1.0, exposure: fator);
     }
 
-    // 2. Brilho
     if (brilho != 0.0) {
       int delta = (brilho * 60).round();
       image = img.brightness(image, delta);
     }
 
-    // 3. Contraste
     if (contraste != 0.0) {
       double c = 1.0 + contraste * 0.8;
       image = img.contrast(image, c * 100);
     }
 
-    // 4. Saturação
     if (saturacao != 0.0) {
       double s = 1.0 + saturacao;
       image = img.adjustColor(image, saturation: s);
     }
 
-    // 5. Tom Quente (estilo iPhone — levemente amarelo-rosado)
-    if (tonQuente > 0) {
-      image = _aplicarTomQuente(image, tonQuente);
-    }
-
-    // 6. Vibrância (satura apenas cores menos saturadas)
-    if (vibrancia > 0) {
-      image = _aplicarVibrancia(image, vibrancia);
-    }
-
-    // 7. Nitidez (unsharp mask leve)
-    if (nitidez > 0) {
-      image = img.gaussianBlur(image, radius: 1);
-      // Re-aplica versão mais nítida misturada
-    }
-
-    // 8. Simulação de HDR suave
-    if (hdr) {
-      image = _aplicarHDRSuave(image);
-    }
-
-    // 9. Redução de ruído leve (blur muito sutil)
-    image = _reducaoRuido(image);
+    if (tonQuente > 0) image = _aplicarTomQuente(image, tonQuente);
+    if (vibrancia > 0) image = _aplicarVibrancia(image, vibrancia);
+    if (nitidez > 0) image = img.gaussianBlur(image, radius: 1);
+    if (hdr) image = _aplicarHDRSuave(image);
 
     return Uint8List.fromList(img.encodeJpg(image, quality: 97));
   }
@@ -107,11 +84,9 @@ class IPhoneProcessor {
     for (int y = 0; y < image.height; y++) {
       for (int x = 0; x < image.width; x++) {
         final pixel = image.getPixel(x, y);
-        int r = img.getRed(pixel) + addR;
+        int r = (img.getRed(pixel) + addR).clamp(0, 255);
         int g = img.getGreen(pixel);
-        int b = img.getBlue(pixel) + addB;
-        r = r.clamp(0, 255);
-        b = b.clamp(0, 255);
+        int b = (img.getBlue(pixel) + addB).clamp(0, 255);
         image.setPixelRgba(x, y, r, g, b, img.getAlpha(pixel));
       }
     }
@@ -126,15 +101,12 @@ class IPhoneProcessor {
         int g = img.getGreen(pixel);
         int b = img.getBlue(pixel);
 
-        // Calcula saturação atual do pixel
         int max = [r, g, b].reduce(math.max);
         int min = [r, g, b].reduce(math.min);
         double sat = max == 0 ? 0 : (max - min) / max;
-
-        // Quanto menos saturado, mais aumenta
         double boost = intensidade * (1.0 - sat) * 0.4;
-
         int avg = ((r + g + b) / 3).round();
+
         r = (r + (r - avg) * boost).round().clamp(0, 255);
         g = (g + (g - avg) * boost).round().clamp(0, 255);
         b = (b + (b - avg) * boost).round().clamp(0, 255);
@@ -146,19 +118,12 @@ class IPhoneProcessor {
   }
 
   static img.Image _aplicarHDRSuave(img.Image image) {
-    // Levanta sombras e recupera altas luzes levemente
     for (int y = 0; y < image.height; y++) {
       for (int x = 0; x < image.width; x++) {
         final pixel = image.getPixel(x, y);
-        int r = img.getRed(pixel);
-        int g = img.getGreen(pixel);
-        int b = img.getBlue(pixel);
-
-        // Curve em S suave
-        r = _curveS(r);
-        g = _curveS(g);
-        b = _curveS(b);
-
+        int r = _curveS(img.getRed(pixel));
+        int g = _curveS(img.getGreen(pixel));
+        int b = _curveS(img.getBlue(pixel));
         image.setPixelRgba(x, y, r, g, b, img.getAlpha(pixel));
       }
     }
@@ -166,17 +131,11 @@ class IPhoneProcessor {
   }
 
   static int _curveS(int v) {
-    // Curve S suave: levanta sombras, mantém meios-tons, comprime altas luzes
     double n = v / 255.0;
     double curved = n < 0.5
         ? 0.5 * math.pow(2 * n, 1.1)
         : 1.0 - 0.5 * math.pow(2 * (1 - n), 1.1);
     return (curved * 255).round().clamp(0, 255);
-  }
-
-  static img.Image _reducaoRuido(img.Image image) {
-    // Blur muito leve apenas em regiões escuras
-    return image; // Pode implementar com gaussianBlur seletivo
   }
 }
 
@@ -190,14 +149,12 @@ class CameraScreen extends StatefulWidget {
   State<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen>
-    with WidgetsBindingObserver {
+class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
   CameraController? _controller;
   bool _isCapturing = false;
   bool _showControls = false;
   int _cameraIndex = 0;
 
-  // Configurações de processamento
   double _exposicao = 0.0;
   double _brilho = 0.0;
   double _contraste = 0.2;
@@ -217,9 +174,26 @@ class _CameraScreenState extends State<CameraScreen>
     _initCamera();
   }
 
+  // Novo: Lida com a minimização do aplicativo para a câmera não travar
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final CameraController? cameraController = _controller;
+
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      cameraController.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      _initCamera();
+    }
+  }
+
   Future<void> _initCamera() async {
-    await Permission.camera.request();
-    await Permission.storage.request();
+    // Nova lógica de permissão
+    final statusCamera = await Permission.camera.request();
+    if (statusCamera.isDenied) return;
 
     if (widget.cameras.isEmpty) return;
 
@@ -249,29 +223,42 @@ class _CameraScreenState extends State<CameraScreen>
       final XFile foto = await _controller!.takePicture();
       final Uint8List bytes = await foto.readAsBytes();
 
-      // Aplica processamento estilo iPhone
-      final Uint8List processada = await IPhoneProcessor.process(
-        bytes,
-        exposicao: _exposicao,
-        brilho: _brilho,
-        contraste: _contraste,
-        saturacao: _saturacao,
-        nitidez: _nitidez,
-        tonQuente: _tonQuente,
-        vibrancia: _vibrancia,
-        hdr: _hdr,
-      );
+      // Pegando as variáveis de estado para passar pro Isolate
+      final double exp = _exposicao;
+      final double bri = _brilho;
+      final double con = _contraste;
+      final double sat = _saturacao;
+      final double nit = _nitidez;
+      final double tQte = _tonQuente;
+      final double vib = _vibrancia;
+      final bool usahdr = _hdr;
 
-      // Salva na galeria
+      // NOVO: Processamento na thread secundária (Não congela a tela!)
+      final Uint8List processada = await Isolate.run(() async {
+        return await IPhoneProcessor.process(
+          bytes,
+          exposicao: exp,
+          brilho: bri,
+          contraste: con,
+          saturacao: sat,
+          nitidez: nit,
+          tonQuente: tQte,
+          vibrancia: vib,
+          hdr: usahdr,
+        );
+      });
+
+      // NOVO: Salvando com o pacote Gal
       final dir = await getTemporaryDirectory();
       final path = '${dir.path}/motoprocam_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await File(path).writeAsBytes(processada);
-      await GallerySaver.saveImage(path);
+      final file = await File(path).writeAsBytes(processada);
+      
+      await Gal.putImage(file.path);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📸 Foto salva na galeria!'),
+            content: Text('📸 Foto salva na galeria com Gal!'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -329,13 +316,11 @@ class _CameraScreenState extends State<CameraScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Preview da câmera
           if (_controller != null && _controller!.value.isInitialized)
             CameraPreview(_controller!)
           else
             const Center(child: CircularProgressIndicator(color: Colors.white)),
 
-          // Gradiente superior
           Positioned(
             top: 0, left: 0, right: 0,
             child: Container(
@@ -350,7 +335,6 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // Gradiente inferior
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: Container(
@@ -365,7 +349,6 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // Seletor de modo
           Positioned(
             top: 60, left: 0, right: 0,
             child: Row(
@@ -396,7 +379,6 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // Painel de controles estilo iPhone
           if (_showControls)
             Positioned(
               bottom: 180,
@@ -405,7 +387,6 @@ class _CameraScreenState extends State<CameraScreen>
               child: _buildPainelControles(),
             ),
 
-          // Botões inferiores
           Positioned(
             bottom: 40,
             left: 0,
@@ -455,11 +436,11 @@ class _CameraScreenState extends State<CameraScreen>
         SizedBox(width: 110, child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12))),
         Expanded(
           child: SliderTheme(
-            data: SliderThemeData(
+            data: const SliderThemeData(
               thumbColor: Colors.amber,
               activeTrackColor: Colors.amber,
               inactiveTrackColor: Colors.white24,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
               trackHeight: 2,
             ),
             child: Slider(value: value, min: min, max: max, onChanged: onChanged),
@@ -477,7 +458,6 @@ class _CameraScreenState extends State<CameraScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Botão de ajustes
           GestureDetector(
             onTap: () => setState(() => _showControls = !_showControls),
             child: Container(
@@ -489,8 +469,6 @@ class _CameraScreenState extends State<CameraScreen>
               child: Icon(Icons.tune, color: _showControls ? Colors.black : Colors.white, size: 24),
             ),
           ),
-
-          // Botão de captura
           GestureDetector(
             onTap: _isCapturing ? null : _capturarFoto,
             child: AnimatedContainer(
@@ -501,7 +479,7 @@ class _CameraScreenState extends State<CameraScreen>
                 color: Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white38, width: 4),
-                boxShadow: [BoxShadow(color: Colors.white24, blurRadius: 20, spreadRadius: 2)],
+                boxShadow: const [BoxShadow(color: Colors.white24, blurRadius: 20, spreadRadius: 2)],
               ),
               child: _isCapturing
                   ? const Padding(
@@ -511,8 +489,6 @@ class _CameraScreenState extends State<CameraScreen>
                   : null,
             ),
           ),
-
-          // Botão de trocar câmera
           GestureDetector(
             onTap: _alternarCamera,
             child: Container(
@@ -526,4 +502,3 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 }
-
